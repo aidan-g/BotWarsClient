@@ -8,7 +8,7 @@ namespace BotWarsClient.Bots
 {
     public class VanillaBot : BotBaseClass
     {
-        public string OpponentName { get; set; }        
+        public string OpponentName { get; set; }
         public int Health { get; set; }
         public int Flips { get; set; }
         public int Fuel { get; set; }
@@ -16,10 +16,75 @@ namespace BotWarsClient.Bots
         public int ArenaSize { get; set; }
         public char Direction { get; set; }
         public bool Flipped { get; set; }
+        public Move OpponentLastMove { get; set; }
         public bool OpponentFlipped { get; set; }
 
+        public BotPosition[] Position { get; set; }
+
+        public bool notYetStarted = true;
+
+        public int Aggression { get; set; }
+
+        public int GetPosition(BotPosition position)
+        {
+            for (var a = 0; a < this.Position.Length; a++)
+            {
+                if (this.Position[a] == position)
+                {
+                    return a;
+                }
+            }
+            return -1;
+        }
+
+        public void SetPosition(BotPosition position, int index)
+        {
+            if (index < 0 && index >= this.Position.Length)
+            {
+                throw new InvalidOperationException("Position is out of range.");
+            }
+            if (this.Position[index] != BotPosition.None)
+            {
+                throw new InvalidOperationException("Space is occupied.");
+            }
+            this.Position[this.GetPosition(position)] = BotPosition.None;
+            this.Position[index] = position;
+        }
+
+        public int GetProximityToEdge()
+        {
+            var position = this.GetPosition(BotPosition.Us);
+            int proximity = default(int);
+            switch (this.Direction)
+            {
+                case 'l':
+                    proximity = (this.ArenaSize - position) - 1;
+                    break;
+                case 'r':
+                    proximity = position;
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+            Console.Out.WriteLine(String.Format("(Edge Proximity) Arena Size: {0}, Our position: {1},  Proximity {2}", this.ArenaSize, position, proximity));
+            return proximity;
+        }
+
+        public int GetProximityToOpponent()
+        {
+            var ourPosition = this.GetPosition(BotPosition.Us);
+            var theirPosition = this.GetPosition(BotPosition.Them);
+            var proximity = Math.Abs(ourPosition - theirPosition);
+            Console.Out.WriteLine(String.Format("(Opponent Proximity) Arena Size: {0}, Our position: {1}, Their Position: {2}, Proximity {3}", this.ArenaSize, ourPosition, theirPosition, proximity));
+            return proximity;
+        }
+
+        public int MoveNumber { get; set; }
+
         public VanillaBot()
-        {            
+        {
+            this.Direction = 'r';
+            this.Position = new BotPosition[100];
         }
 
         /// <summary>
@@ -27,7 +92,124 @@ namespace BotWarsClient.Bots
         /// </summary>
         public override Move GetMove()
         {
-            return Move.MoveBackwards; // This bot isn't very smart - it'll pick a walk backwards until it falls out of the arena and dies
+            if (notYetStarted)
+            {
+                return Move.AttackWithAxe;
+            }
+
+            this.PrintPosition();
+
+            this.MoveNumber++;
+            if (this.Flipped)
+            {
+                if (this.Flips > 0)
+                {
+                    this.Flips--;
+                    this.Flipped = false;
+                    return Move.Flip;
+                }
+                else
+                {
+                    return Move.Invalid;
+                }
+            }
+
+            if (this.MoveNumber == 0 && this.Fuel > 0)
+            {
+                this.Fuel--;
+                return Move.FlameThrower;
+            }
+
+            try
+            {
+                if (this.GetProximityToEdge() <= 1)
+                {
+                    Console.Out.WriteLine("ON THE ROPES!!");
+                    if (this.CanMove(Move.MoveForwards))
+                    {
+                        this.MoveUsForward();
+                        return Move.MoveForwards;
+                    }
+                    else
+                    {
+                        if (this.GetProximityToEdge() > 0 && (this.MoveNumber % 2 == 0))
+                        {
+                            return Move.AttackWithAxe;
+                        }
+                        else
+                        {
+                            this.MoveThemBackward();
+                            this.MoveUsForward();
+                            return Move.Shunt;
+                        }
+                    }
+                }
+
+                if (this.Aggression >= 2 && this.Flips > 0)
+                {
+                    this.Aggression--;
+                    System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
+                    this.Flips--;
+                    return Move.Flip;
+                }
+
+                if (this.Aggression >= 1)
+                {
+                    System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
+                    this.Aggression--;
+                    return Move.AttackWithAxe;
+                }
+
+                if (this.IsInRangeOfAttack(Move.AttackWithAxe))
+                {
+                    return Move.AttackWithAxe;
+                }
+
+                if (this.Fuel > 0 && this.IsInRangeOfAttack(Move.FlameThrower))
+                {
+                    this.Fuel--;
+                    return Move.FlameThrower;
+                }
+
+                if (this.CanMove(Move.MoveForwards))
+                {
+                    this.MoveUsForward();
+                    return Move.MoveForwards;
+                }
+                else
+                {
+                    this.MoveThemBackward();
+                    this.MoveUsForward();
+                    return Move.Shunt;
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.Out.WriteLine(e.Message);
+            }
+            //Fuck it.
+            return Move.AttackWithAxe;
+        }
+
+        protected virtual void PrintPosition()
+        {
+            System.Console.Out.Write("Positions : [");
+            for (var a = 0; a < this.Position.Length; a++)
+            {
+                switch (this.Position[a])
+                {
+                    case BotPosition.None:
+                        System.Console.Out.Write("----");
+                        break;
+                    case BotPosition.Us:
+                        System.Console.Out.Write("-Us-");
+                        break;
+                    case BotPosition.Them:
+                        System.Console.Out.Write("Them");
+                        break;
+                }
+            }
+            System.Console.Out.WriteLine("]");
         }
 
         public override void SetStartValues(string opponentName, int health, int arenaSize, int flips, int flipOdds, int fuel, char direction, int startIndex)
@@ -41,24 +223,147 @@ namespace BotWarsClient.Bots
             Direction = direction;
             Flipped = false;
             OpponentFlipped = false;
+            this.notYetStarted = false;
+            this.Position = new BotPosition[arenaSize];
+            this.Position[startIndex] = BotPosition.Us;
+            if (startIndex < arenaSize / 2)
+            {
+                this.Position[startIndex + 2] = BotPosition.Them;
+            }
+            else
+            {
+                this.Position[startIndex - 2] = BotPosition.Them;
+            }
+
+            this.MoveNumber = -1;
+            this.Aggression = 0;
 
             base.SetStartValues(opponentName, health, arenaSize, flips, flipOdds, fuel, direction, startIndex);
         }
 
         public override void CaptureOpponentsLastMove(Move lastOpponentsMove)
         {
-                     
+            try
+            {
+                switch (lastOpponentsMove)
+                {
+                    case Move.MoveForwards:
+                        if (!this.CanMove(Move.MoveForwards))
+                        {
+                            this.MoveUsBackward();
+                        }
+                        this.MoveThemForward();
+                        break;
+                    case Move.MoveBackwards:
+                        this.MoveThemBackward();
+                        break;
+
+                    case Move.Shunt:
+                        //It's complicated.
+
+                        this.Aggression = 2;
+                        System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
+
+                        this.MoveUsBackward();
+                        this.MoveThemForward();
+
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.Out.WriteLine(e.Message);
+            }
+            this.OpponentLastMove = lastOpponentsMove;
+        }
+
+        public void MoveUsForward()
+        {
+            this.MoveForward(BotPosition.Us);
+        }
+
+        public void MoveThemForward()
+        {
+            this.MoveBackward(BotPosition.Them);
+        }
+
+        protected virtual void MoveForward(BotPosition position)
+        {
+            switch (this.Direction)
+            {
+                case 'l':
+                    this.SetPosition(position, this.GetPosition(position) - 1);
+                    break;
+                case 'r':
+                    this.SetPosition(position, this.GetPosition(position) + 1);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public void MoveUsBackward()
+        {
+            this.MoveBackward(BotPosition.Us);
+        }
+
+        public void MoveThemBackward()
+        {
+            this.MoveForward(BotPosition.Them);
+        }
+
+        protected virtual void MoveBackward(BotPosition position)
+        {
+            switch (this.Direction)
+            {
+                case 'l':
+                    this.SetPosition(position, this.GetPosition(position) + 1);
+                    break;
+                case 'r':
+                    this.SetPosition(position, this.GetPosition(position) - 1);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public virtual bool CanMove(Move move)
+        {
+            var proximity = this.GetProximityToOpponent();
+            switch (move)
+            {
+                case Move.MoveForwards:
+                    return proximity > 1;
+                case Move.MoveBackwards:
+                    //We will never do this.
+                    return false;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        protected virtual bool IsInRangeOfAttack(Move move)
+        {
+            var proximity = this.GetProximityToOpponent();
+            switch (move)
+            {
+                case Move.AttackWithAxe:
+                    return proximity <= 1;
+                case Move.FlameThrower:
+                    return proximity <= 2;
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         public override void SetFlippedStatus(bool flipped)
         {
-
+            this.Flipped = flipped;
         }
+
         public override void SetOpponentFlippedStatus(bool opponentFlipped)
         {
-
+            this.OpponentFlipped = opponentFlipped;
         }
-
-
     }
 }

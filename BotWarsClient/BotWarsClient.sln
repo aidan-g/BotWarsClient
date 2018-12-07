@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BotWarsClient", "BotWarsClient\BotWarsClient.csproj", "{2BEF7D41-E2E6-48FE-A0A6-2F4688EC3CCA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BotWarsClient.Tests", "BotWarsClient.Tests\BotWarsClient.Tests.csproj", "{CFEE200E-4E22-4ED2-9FF9-7B78A444493D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +17,15 @@ Global
 		{2BEF7D41-E2E6-48FE-A0A6-2F4688EC3CCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BEF7D41-E2E6-48FE-A0A6-2F4688EC3CCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2BEF7D41-E2E6-48FE-A0A6-2F4688EC3CCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFEE200E-4E22-4ED2-9FF9-7B78A444493D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFEE200E-4E22-4ED2-9FF9-7B78A444493D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFEE200E-4E22-4ED2-9FF9-7B78A444493D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFEE200E-4E22-4ED2-9FF9-7B78A444493D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC50755A-3867-4026-8AB2-981C1E60E77C}
 	EndGlobalSection
 EndGlobal

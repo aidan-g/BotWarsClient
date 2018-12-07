@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BotBaseClass.cs" />
+    <Compile Include="BotPosition.cs" />
     <Compile Include="Bots\VanillaBot.cs" />
     <Compile Include="HttpListener.cs" />
     <Compile Include="Move.cs" />
