@@ -270,7 +270,7 @@ namespace BotWarsClient
                                 flips = int.Parse(paramValue);
                                 break;
                             }
-                        case "flipOdds":
+                        case "flipodds":
                             {
                                 flipOdds = int.Parse(paramValue);
                                 break;

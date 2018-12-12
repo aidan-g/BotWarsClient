@@ -1,29 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BotWarsClient.Bots
 {
     public class VanillaBot : BotBaseClass
     {
+        private static readonly Random Random = new Random(unchecked((int)DateTime.Now.Ticks));
+
         public string OpponentName { get; set; }
+
         public int Health { get; set; }
+
         public int Flips { get; set; }
+
         public int Fuel { get; set; }
+
         public int FlipOdds { get; set; }
+
         public int ArenaSize { get; set; }
+
         public char Direction { get; set; }
+
         public bool Flipped { get; set; }
+
         public Move OpponentLastMove { get; set; }
+
         public bool OpponentFlipped { get; set; }
 
         public BotPosition[] Position { get; set; }
 
-        public bool notYetStarted = true;
+        public bool IsInitialized { get; set; }
 
-        public int Aggression { get; set; }
+        public IList<Move> TheirMoves { get; set; }
 
         public int GetPosition(BotPosition position)
         {
@@ -92,8 +101,9 @@ namespace BotWarsClient.Bots
         /// </summary>
         public override Move GetMove()
         {
-            if (notYetStarted)
+            if (!this.IsInitialized)
             {
+                Console.Out.WriteLine("Not initialized.");
                 return Move.AttackWithAxe;
             }
 
@@ -104,29 +114,47 @@ namespace BotWarsClient.Bots
             {
                 if (this.Flips > 0)
                 {
+                    Console.Out.WriteLine("Self righting.");
                     this.Flips--;
                     this.Flipped = false;
                     return Move.Flip;
                 }
                 else
                 {
+                    Console.Out.WriteLine("Cannot self right!");
                     return Move.Invalid;
                 }
             }
 
             if (this.MoveNumber == 0 && this.Fuel > 0)
             {
+                Console.Out.Write("It's the first move, flame thrower is safe.");
                 this.Fuel--;
                 return Move.FlameThrower;
             }
 
             try
             {
+                if (this.GetProximityToEdge() > 1 && this.AreTheyUsing(Move.Flip, Move.Shunt))
+                {
+                    Console.Out.Write("They're using flips and shunts and we have some space, backing off.");
+                    this.MoveUsBackward();
+                    return Move.MoveBackwards;
+                }
+
+                if (this.AreTheyUsing(Move.Shunt) && this.Flips > 0 && this.IsInRangeOfAttack(Move.Flip))
+                {
+                    Console.Out.Write("They're using shunts, flipping.");
+                    this.Flips--;
+                    return Move.Flip;
+                }
+
                 if (this.GetProximityToEdge() <= 1)
                 {
-                    Console.Out.WriteLine("ON THE ROPES!!");
+                    Console.Out.WriteLine("We're close the the edge, attempting to reclaim ground.");
                     if (this.CanMove(Move.MoveForwards))
                     {
+                        Console.Out.WriteLine("Moving forwards.");
                         this.MoveUsForward();
                         return Move.MoveForwards;
                     }
@@ -134,10 +162,21 @@ namespace BotWarsClient.Bots
                     {
                         if (this.GetProximityToEdge() > 0 && (this.MoveNumber % 2 == 0))
                         {
-                            return Move.AttackWithAxe;
+                            if (this.Fuel > 0 && this.IsInRangeOfAttack(Move.FlameThrower))
+                            {
+                                Console.Out.WriteLine("We have fuel and their in range, using flame thrower.");
+                                this.Fuel--;
+                                return Move.FlameThrower;
+                            }
+                            else
+                            {
+                                Console.Out.WriteLine("Axing.");
+                                return Move.AttackWithAxe;
+                            }
                         }
-                        else
+                        else if (this.IsInRangeOfAttack(Move.Shunt))
                         {
+                            Console.Out.WriteLine("Shunting.");
                             this.MoveThemBackward();
                             this.MoveUsForward();
                             return Move.Shunt;
@@ -145,39 +184,28 @@ namespace BotWarsClient.Bots
                     }
                 }
 
-                if (this.Aggression >= 2 && this.Flips > 0)
-                {
-                    this.Aggression--;
-                    System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
-                    this.Flips--;
-                    return Move.Flip;
-                }
-
-                if (this.Aggression >= 1)
-                {
-                    System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
-                    this.Aggression--;
-                    return Move.AttackWithAxe;
-                }
-
-                if (this.IsInRangeOfAttack(Move.AttackWithAxe))
-                {
-                    return Move.AttackWithAxe;
-                }
-
                 if (this.Fuel > 0 && this.IsInRangeOfAttack(Move.FlameThrower))
                 {
+                    Console.Out.WriteLine("We have fuel and their in range, using flame thrower.");
                     this.Fuel--;
                     return Move.FlameThrower;
                 }
 
+                if (this.IsInRangeOfAttack(Move.AttackWithAxe))
+                {
+                    Console.Out.WriteLine("Close quarters, Axing.");
+                    return Move.AttackWithAxe;
+                }
+
                 if (this.CanMove(Move.MoveForwards))
                 {
+                    Console.Out.WriteLine("Closing in.");
                     this.MoveUsForward();
                     return Move.MoveForwards;
                 }
-                else
+                else if (this.IsInRangeOfAttack(Move.Shunt))
                 {
+                    Console.Out.WriteLine("Shunting.");
                     this.MoveThemBackward();
                     this.MoveUsForward();
                     return Move.Shunt;
@@ -223,9 +251,12 @@ namespace BotWarsClient.Bots
             Direction = direction;
             Flipped = false;
             OpponentFlipped = false;
-            this.notYetStarted = false;
+
             this.Position = new BotPosition[arenaSize];
             this.Position[startIndex] = BotPosition.Us;
+
+            this.TheirMoves = new List<Move>();
+
             if (startIndex < arenaSize / 2)
             {
                 this.Position[startIndex + 2] = BotPosition.Them;
@@ -236,7 +267,8 @@ namespace BotWarsClient.Bots
             }
 
             this.MoveNumber = -1;
-            this.Aggression = 0;
+
+            this.IsInitialized = true;
 
             base.SetStartValues(opponentName, health, arenaSize, flips, flipOdds, fuel, direction, startIndex);
         }
@@ -260,13 +292,8 @@ namespace BotWarsClient.Bots
 
                     case Move.Shunt:
                         //It's complicated.
-
-                        this.Aggression = 2;
-                        System.Console.Out.WriteLine("Aggression = {0}", this.Aggression);
-
                         this.MoveUsBackward();
                         this.MoveThemForward();
-
                         break;
                 }
             }
@@ -275,6 +302,13 @@ namespace BotWarsClient.Bots
                 System.Console.Out.WriteLine(e.Message);
             }
             this.OpponentLastMove = lastOpponentsMove;
+            this.TheirMoves.Add(lastOpponentsMove);
+        }
+
+        protected virtual bool AreTheyUsing(params Move[] moves)
+        {
+            var count = this.TheirMoves.Take(10).Count(move => moves.Contains(move));
+            return count > 5;
         }
 
         public void MoveUsForward()
@@ -351,6 +385,10 @@ namespace BotWarsClient.Bots
                     return proximity <= 1;
                 case Move.FlameThrower:
                     return proximity <= 2;
+                case Move.Flip:
+                    return proximity <= 1 && (this.FlipOdds + Random.Next(50)) > 50;
+                case Move.Shunt:
+                    return proximity <= 1;
                 default:
                     throw new NotImplementedException();
             }
