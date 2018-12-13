@@ -257,13 +257,27 @@ namespace BotWarsClient.Bots
 
             this.TheirMoves = new List<Move>();
 
-            if (startIndex < arenaSize / 2)
+            if (arenaSize % 2 == 0)
             {
-                this.Position[startIndex + 2] = BotPosition.Them;
+                if (startIndex < arenaSize / 2)
+                {
+                    this.Position[startIndex + 1] = BotPosition.Them;
+                }
+                else
+                {
+                    this.Position[startIndex - 1] = BotPosition.Them;
+                }
             }
             else
             {
-                this.Position[startIndex - 2] = BotPosition.Them;
+                if (startIndex < arenaSize / 2)
+                {
+                    this.Position[startIndex + 2] = BotPosition.Them;
+                }
+                else
+                {
+                    this.Position[startIndex - 2] = BotPosition.Them;
+                }
             }
 
             this.MoveNumber = -1;
